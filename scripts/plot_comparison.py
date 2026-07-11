@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-# Palette categorical (reference, đã validate CVD): blue, aqua, yellow, green.
-SERIES_COLORS = ["#2a78d6", "#1baf7a", "#eda100", "#008300"]
+# Palette categorical (reference, đã validate CVD): blue, aqua, yellow, green, violet.
+SERIES_COLORS = ["#2a78d6", "#1baf7a", "#eda100", "#008300", "#4a3aa7"]
 INK, MUTED, GRID, SURFACE = "#0b0b0b", "#898781", "#e1e0d9", "#fcfcfb"
 
 
