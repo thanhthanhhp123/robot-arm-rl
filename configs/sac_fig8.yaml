@@ -1,4 +1,4 @@
-# SAC — Slice 4: target chạy theo đường tròn param bởi t.
+# SAC — target chạy theo hình số 8 (Lissajous 1:2) param bởi t.
 seed: 42
 algo: sac
 
@@ -9,11 +9,12 @@ env:
   max_angular_step: 0.1
   dt: 0.05
   target_bounds: [0.5, 1.9]
-  trajectory: circle
+  trajectory: figure8
   trajectory_params:
     center: [1.0, 0.0]
-    radius: 0.5
-    period: 10.0                # giây / vòng; episode 200 bước * dt 0.05 = 1 vòng
+    width: 0.6                  # biên độ x
+    height: 0.35                # biên độ y
+    period: 10.0
 
 sac:
   policy: MlpPolicy
@@ -26,15 +27,15 @@ sac:
   train_freq: 1
   gradient_steps: 1
   ent_coef: auto
-  device: cpu   # MLP nhỏ: overhead CPU<->GPU lấn át, CPU nhanh hơn (99 vs 38 fps)
+  device: cpu
 
 train:
   total_timesteps: 100000
   checkpoint_freq: 10000
   distance_log_freq: 1000
-  run_name: sac_circle
+  run_name: sac_fig8
   output_root: outputs/runs
 
 eval:
   n_episodes: 20
-  success_threshold: 0.05       # dist < ε tính là bám tốt
+  success_threshold: 0.05

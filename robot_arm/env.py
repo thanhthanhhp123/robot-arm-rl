@@ -12,7 +12,7 @@ import numpy as np
 from gymnasium import spaces
 
 from robot_arm.kinematics import end_effector_position, forward_kinematics
-from robot_arm.trajectories import CircleTrajectory
+from robot_arm.trajectories import make_trajectory
 
 
 class RobotArm2DEnv(gym.Env):
@@ -38,9 +38,7 @@ class RobotArm2DEnv(gym.Env):
         dt: float = 0.05,
         target_bounds: tuple[float, float] = (0.5, 1.9),
         trajectory: str = "fixed",
-        circle_center: tuple[float, float] = (1.0, 0.0),
-        circle_radius: float = 0.5,
-        circle_period: float = 10.0,
+        trajectory_params: dict[str, Any] | None = None,
         render_mode: str | None = None,
     ) -> None:
         """Khởi tạo môi trường.
@@ -53,15 +51,12 @@ class RobotArm2DEnv(gym.Env):
             dt: Thời gian mỗi step (s), dùng để tính θ_dot và tham số t quỹ đạo.
             target_bounds: (min, max) bán kính lấy mẫu target quanh base,
                 phải nằm trong workspace [|l1-l2|, l1+l2] (chế độ "fixed").
-            trajectory: "fixed" (target đứng yên) hoặc "circle" (chạy đường tròn).
-            circle_center: Tâm đường tròn quỹ đạo target.
-            circle_radius: Bán kính đường tròn.
-            circle_period: Chu kỳ 1 vòng (giây), t = step_count * dt.
+            trajectory: "fixed" | "circle" | "figure8" | "spline".
+            trajectory_params: Tham số cho trajectory (xem trajectories.py),
+                ví dụ circle: {center, radius, period}.
             render_mode: Chế độ render (None hoặc "rgb_array").
         """
         super().__init__()
-        if trajectory not in ("fixed", "circle"):
-            raise ValueError(f"trajectory không hợp lệ: {trajectory!r}")
         self.l1 = l1
         self.l2 = l2
         self.max_steps = max_steps
@@ -69,12 +64,8 @@ class RobotArm2DEnv(gym.Env):
         self.dt = dt
         self.target_bounds = target_bounds
         self.trajectory = trajectory
-        self._circle = (
-            CircleTrajectory(circle_center, circle_radius, circle_period)
-            if trajectory == "circle"
-            else None
-        )
-        self._phase: float = 0.0
+        self._traj = make_trajectory(trajectory, trajectory_params or {})
+        self._t0: float = 0.0
         self.render_mode = render_mode
 
         self.action_space = spaces.Box(
@@ -138,9 +129,9 @@ class RobotArm2DEnv(gym.Env):
         self.theta = np.zeros(2, dtype=np.float32)
         self.theta_dot = np.zeros(2, dtype=np.float32)
         self.step_count = 0
-        if self._circle is not None:
-            self._phase = float(self.np_random.uniform(0.0, 2.0 * np.pi))
-            self.target = self._circle.position(0.0, self._phase)
+        if self._traj is not None:
+            self._t0 = float(self.np_random.uniform(0.0, self._traj.period))
+            self.target = self._traj.position(self._t0)
         else:
             self.target = self._sample_target()
 
@@ -160,9 +151,8 @@ class RobotArm2DEnv(gym.Env):
         self.theta_dot = (self.theta - prev_theta) / self.dt
         self.step_count += 1
 
-        if self._circle is not None:
-            t = self.step_count * self.dt
-            self.target = self._circle.position(t, self._phase)
+        if self._traj is not None:
+            self.target = self._traj.position(self._t0 + self.step_count * self.dt)
 
         ee = end_effector_position(self.theta[0], self.theta[1], self.l1, self.l2)
         dist = float(np.linalg.norm(self.target - ee))

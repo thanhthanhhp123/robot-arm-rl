@@ -1,4 +1,4 @@
-# SAC — Slice 4: target chạy theo đường tròn param bởi t.
+# SAC — target chạy theo spline khép kín (Catmull-Rom) qua các điểm tự vẽ.
 seed: 42
 algo: sac
 
@@ -9,11 +9,15 @@ env:
   max_angular_step: 0.1
   dt: 0.05
   target_bounds: [0.5, 1.9]
-  trajectory: circle
+  trajectory: spline
   trajectory_params:
-    center: [1.0, 0.0]
-    radius: 0.5
-    period: 10.0                # giây / vòng; episode 200 bước * dt 0.05 = 1 vòng
+    points:                     # control points trong workspace (|p| <= l1+l2)
+      - [1.3, 0.2]
+      - [0.8, 0.9]
+      - [0.0, 1.2]
+      - [-0.6, 0.6]
+      - [0.3, 0.1]
+    period: 10.0
 
 sac:
   policy: MlpPolicy
@@ -26,15 +30,15 @@ sac:
   train_freq: 1
   gradient_steps: 1
   ent_coef: auto
-  device: cpu   # MLP nhỏ: overhead CPU<->GPU lấn át, CPU nhanh hơn (99 vs 38 fps)
+  device: cpu
 
 train:
   total_timesteps: 100000
   checkpoint_freq: 10000
   distance_log_freq: 1000
-  run_name: sac_circle
+  run_name: sac_spline
   output_root: outputs/runs
 
 eval:
   n_episodes: 20
-  success_threshold: 0.05       # dist < ε tính là bám tốt
+  success_threshold: 0.05

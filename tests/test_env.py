@@ -106,9 +106,19 @@ def test_target_within_workspace(env: RobotArm2DEnv) -> None:
         assert env.l1 + env.l2 >= radius >= abs(env.l1 - env.l2)
 
 
+CIRCLE_PARAMS = {"center": [1.0, 0.0], "radius": 0.5, "period": 10.0}
+FIG8_PARAMS = {"center": [1.0, 0.0], "width": 0.6, "height": 0.35, "period": 10.0}
+SPLINE_PARAMS = {
+    "points": [[1.3, 0.2], [0.8, 0.9], [0.0, 1.2], [-0.6, 0.6], [0.3, 0.1]],
+    "period": 10.0,
+}
+
+
 @pytest.fixture
 def circle_env() -> RobotArm2DEnv:
-    return RobotArm2DEnv(max_steps=50, trajectory="circle")
+    return RobotArm2DEnv(
+        max_steps=50, trajectory="circle", trajectory_params=CIRCLE_PARAMS
+    )
 
 
 def test_invalid_trajectory_raises() -> None:
@@ -127,12 +137,11 @@ def test_circle_target_moves_each_step(circle_env: RobotArm2DEnv) -> None:
 
 def test_circle_target_stays_on_circle(circle_env: RobotArm2DEnv) -> None:
     circle_env.reset(seed=5)
-    center = circle_env._circle.center
-    radius = circle_env._circle.radius
+    center = np.array(CIRCLE_PARAMS["center"])
     for _ in range(50):
         circle_env.step(circle_env.action_space.sample())
         dist_to_center = float(np.linalg.norm(circle_env.target - center))
-        assert dist_to_center == pytest.approx(radius, abs=1e-5)
+        assert dist_to_center == pytest.approx(CIRCLE_PARAMS["radius"], abs=1e-5)
 
 
 def test_circle_obs_contains_target_and_error(circle_env: RobotArm2DEnv) -> None:
@@ -145,16 +154,52 @@ def test_circle_obs_contains_target_and_error(circle_env: RobotArm2DEnv) -> None
     np.testing.assert_allclose(obs[8:10], circle_env.target - ee, rtol=1e-4, atol=1e-6)
 
 
-def test_circle_random_rollout_in_observation_space(
-    circle_env: RobotArm2DEnv,
-) -> None:
-    obs, _ = circle_env.reset(seed=8)
-    assert circle_env.observation_space.contains(obs)
-    for _ in range(circle_env.max_steps):
-        obs, reward, terminated, truncated, _ = circle_env.step(
-            circle_env.action_space.sample()
-        )
-        assert circle_env.observation_space.contains(obs)
+@pytest.mark.parametrize(
+    "trajectory,params",
+    [
+        ("circle", CIRCLE_PARAMS),
+        ("figure8", FIG8_PARAMS),
+        ("spline", SPLINE_PARAMS),
+    ],
+)
+def test_moving_target_random_rollout(trajectory: str, params: dict) -> None:
+    env = RobotArm2DEnv(max_steps=50, trajectory=trajectory, trajectory_params=params)
+    obs, _ = env.reset(seed=8)
+    assert env.observation_space.contains(obs)
+    prev_target = env.target.copy()
+    for _ in range(env.max_steps):
+        obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
+        assert env.observation_space.contains(obs)
         assert np.isfinite(reward)
+        assert not np.allclose(env.target, prev_target)
+        prev_target = env.target.copy()
         if terminated or truncated:
             break
+
+
+def test_figure8_target_within_bounds() -> None:
+    env = RobotArm2DEnv(trajectory="figure8", trajectory_params=FIG8_PARAMS)
+    env.reset(seed=9)
+    center = np.array(FIG8_PARAMS["center"])
+    for _ in range(200):
+        env.step(env.action_space.sample())
+        offset = env.target - center
+        assert abs(offset[0]) <= FIG8_PARAMS["width"] + 1e-5
+        assert abs(offset[1]) <= FIG8_PARAMS["height"] + 1e-5
+
+
+def test_spline_passes_through_control_points() -> None:
+    from robot_arm.trajectories import SplineTrajectory
+
+    traj = SplineTrajectory(SPLINE_PARAMS["points"], SPLINE_PARAMS["period"])
+    n = len(SPLINE_PARAMS["points"])
+    for k, point in enumerate(SPLINE_PARAMS["points"]):
+        pos = traj.position(k * SPLINE_PARAMS["period"] / n)
+        np.testing.assert_allclose(pos, point, atol=1e-5)
+
+
+def test_spline_requires_4_points() -> None:
+    from robot_arm.trajectories import SplineTrajectory
+
+    with pytest.raises(ValueError):
+        SplineTrajectory([[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0]], period=10.0)

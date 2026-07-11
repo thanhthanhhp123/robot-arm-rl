@@ -10,9 +10,10 @@ env:
   dt: 0.05
   target_bounds: [0.5, 1.9]
   trajectory: circle
-  circle_center: [1.0, 0.0]
-  circle_radius: 0.5
-  circle_period: 10.0
+  trajectory_params:
+    center: [1.0, 0.0]
+    radius: 0.5
+    period: 10.0
 
 ppo:
   policy: MlpPolicy
