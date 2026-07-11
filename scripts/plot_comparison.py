@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-# Palette categorical (reference, đã validate CVD): slot 1 blue, slot 2 aqua.
-SERIES_COLORS = ["#2a78d6", "#1baf7a"]
+# Palette categorical (reference, đã validate CVD): blue, aqua, yellow, green.
+SERIES_COLORS = ["#2a78d6", "#1baf7a", "#eda100", "#008300"]
 INK, MUTED, GRID, SURFACE = "#0b0b0b", "#898781", "#e1e0d9", "#fcfcfb"
 
 
@@ -44,13 +44,17 @@ def style_axis(ax: plt.Axes, title: str, ylabel: str) -> None:
 
 
 def plot_tag(
-    ax: plt.Axes, run_dirs: list[Path], labels: list[str], tag: str
+    ax: plt.Axes,
+    run_dirs: list[Path],
+    labels: list[str],
+    tag: str,
+    legend_loc: str = "upper right",
 ) -> None:
     """Vẽ 1 tag cho các run lên axes; nhận diện series qua legend + bảng metrics."""
     for run, label, color in zip(run_dirs, labels, SERIES_COLORS):
         steps, values = load_scalar(run / "tb", tag)
         ax.plot(steps, values, color=color, linewidth=2, label=label)
-    ax.legend(loc="upper right", fontsize=9, frameon=False, labelcolor=INK)
+    ax.legend(loc=legend_loc, fontsize=9, frameon=False, labelcolor=INK)
 
 
 def main() -> None:
@@ -63,7 +67,10 @@ def main() -> None:
 
     run_dirs = [Path(r) for r in args.runs]
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2), facecolor=SURFACE)
-    plot_tag(axes[0], run_dirs, args.labels, "rollout/ep_rew_mean")
+    plot_tag(
+        axes[0], run_dirs, args.labels, "rollout/ep_rew_mean",
+        legend_loc="lower right",
+    )
     style_axis(axes[0], "Episode reward trung bình", "reward")
     plot_tag(axes[1], run_dirs, args.labels, "rollout/mean_distance")
     style_axis(axes[1], "Tracking error trung bình (ee ↔ target)", "distance")
