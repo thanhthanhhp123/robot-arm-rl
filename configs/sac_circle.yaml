@@ -1,0 +1,39 @@
+# SAC — Slice 4: target chạy theo đường tròn param bởi t.
+seed: 42
+algo: sac
+
+env:
+  l1: 1.0
+  l2: 1.0
+  max_steps: 200
+  max_angular_step: 0.1
+  dt: 0.05
+  target_bounds: [0.5, 1.9]
+  trajectory: circle
+  circle_center: [1.0, 0.0]
+  circle_radius: 0.5
+  circle_period: 10.0           # giây / vòng; episode 200 bước * dt 0.05 = 1 vòng
+
+sac:
+  policy: MlpPolicy
+  learning_rate: 3.0e-4
+  buffer_size: 100000
+  learning_starts: 1000
+  batch_size: 256
+  tau: 0.005
+  gamma: 0.99
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: auto
+  device: cpu   # MLP nhỏ: overhead CPU<->GPU lấn át, CPU nhanh hơn (99 vs 38 fps)
+
+train:
+  total_timesteps: 100000
+  checkpoint_freq: 10000
+  distance_log_freq: 1000
+  run_name: sac_circle
+  output_root: outputs/runs
+
+eval:
+  n_episodes: 20
+  success_threshold: 0.05       # dist < ε tính là bám tốt

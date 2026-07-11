@@ -1,0 +1,9 @@
+# outputs: checkpoints, videos, logs — không commit
+outputs/
+
+# môi trường & cache
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/
