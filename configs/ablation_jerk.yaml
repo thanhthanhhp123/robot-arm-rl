@@ -1,0 +1,42 @@
+# Ablation reward terms (base: sac_circle) — variant: jerk
+algo: sac
+env:
+  dt: 0.05
+  l1: 1.0
+  l2: 1.0
+  max_angular_step: 0.1
+  max_steps: 200
+  target_bounds:
+  - 0.5
+  - 1.9
+  trajectory: circle
+  trajectory_params:
+    center:
+    - 1.0
+    - 0.0
+    period: 10.0
+    radius: 0.5
+  reward_params:
+    w_jerk: 0.001
+eval:
+  n_episodes: 20
+  success_threshold: 0.05
+sac:
+  batch_size: 256
+  buffer_size: 100000
+  device: cpu
+  ent_coef: auto
+  gamma: 0.99
+  gradient_steps: 1
+  learning_rate: 0.0003
+  learning_starts: 1000
+  policy: MlpPolicy
+  tau: 0.005
+  train_freq: 1
+seed: 42
+train:
+  checkpoint_freq: 10000
+  distance_log_freq: 1000
+  output_root: outputs/runs
+  run_name: sac_abl_jerk
+  total_timesteps: 100000

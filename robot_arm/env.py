@@ -39,6 +39,7 @@ class RobotArm2DEnv(gym.Env):
         target_bounds: tuple[float, float] = (0.5, 1.9),
         trajectory: str = "fixed",
         trajectory_params: dict[str, Any] | None = None,
+        reward_params: dict[str, float] | None = None,
         render_mode: str | None = None,
     ) -> None:
         """Khởi tạo môi trường.
@@ -54,6 +55,9 @@ class RobotArm2DEnv(gym.Env):
             trajectory: "fixed" | "circle" | "figure8" | "spline".
             trajectory_params: Tham số cho trajectory (xem trajectories.py),
                 ví dụ circle: {center, radius, period}.
+            reward_params: Hệ số các reward term phụ (mặc định 0 = chỉ -dist):
+                w_effort (phạt ||action||), w_jerk (phạt ||θ_dot||),
+                bonus + bonus_threshold (thưởng khi dist < ngưỡng).
             render_mode: Chế độ render (None hoặc "rgb_array").
         """
         super().__init__()
@@ -66,6 +70,8 @@ class RobotArm2DEnv(gym.Env):
         self.trajectory = trajectory
         self._traj = make_trajectory(trajectory, trajectory_params or {})
         self._t0: float = 0.0
+        defaults = {"w_effort": 0.0, "w_jerk": 0.0, "bonus": 0.0, "bonus_threshold": 0.05}
+        self.reward_params = {**defaults, **(reward_params or {})}
         self.render_mode = render_mode
 
         self.action_space = spaces.Box(
@@ -156,12 +162,22 @@ class RobotArm2DEnv(gym.Env):
 
         ee = end_effector_position(self.theta[0], self.theta[1], self.l1, self.l2)
         dist = float(np.linalg.norm(self.target - ee))
-        reward = -dist
+
+        rp = self.reward_params
+        terms = {
+            "dist": -dist,
+            "effort": -rp["w_effort"] * float(np.linalg.norm(action)),
+            "jerk": -rp["w_jerk"] * float(np.linalg.norm(self.theta_dot)),
+            "bonus": rp["bonus"] if dist < rp["bonus_threshold"] else 0.0,
+        }
+        reward = float(sum(terms.values()))
 
         terminated = False
         truncated = self.step_count >= self.max_steps
 
-        return self._get_obs(), reward, terminated, truncated, self._get_info(ee, dist)
+        info = self._get_info(ee, dist)
+        info["reward_terms"] = terms
+        return self._get_obs(), reward, terminated, truncated, info
 
     def render(self) -> np.ndarray | None:
         """Vẽ frame hiện tại (2 link, end-effector, target) khi render_mode='rgb_array'."""

@@ -203,3 +203,38 @@ def test_spline_requires_4_points() -> None:
 
     with pytest.raises(ValueError):
         SplineTrajectory([[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0]], period=10.0)
+
+
+REWARD_PARAMS = {"w_effort": 0.01, "w_jerk": 0.001, "bonus": 1.0, "bonus_threshold": 0.05}
+
+
+def test_reward_equals_sum_of_terms() -> None:
+    env = RobotArm2DEnv(reward_params=REWARD_PARAMS)
+    env.reset(seed=10)
+    for _ in range(10):
+        _, reward, _, _, info = env.step(env.action_space.sample())
+        terms = info["reward_terms"]
+        assert set(terms) == {"dist", "effort", "jerk", "bonus"}
+        assert reward == pytest.approx(sum(terms.values()))
+        assert terms["effort"] <= 0.0
+        assert terms["jerk"] <= 0.0
+
+
+def test_bonus_when_close_to_target() -> None:
+    env = RobotArm2DEnv(reward_params=REWARD_PARAMS)
+    env.reset(seed=11)
+    ee = end_effector_position(env.theta[0], env.theta[1], env.l1, env.l2)
+    env.target = ee.astype(np.float32)  # đặt target trùng ee
+    _, reward, _, _, info = env.step(np.zeros(2, dtype=np.float32))
+    assert info["reward_terms"]["bonus"] == pytest.approx(REWARD_PARAMS["bonus"])
+    assert reward == pytest.approx(REWARD_PARAMS["bonus"], abs=1e-5)
+
+
+def test_default_reward_is_pure_distance() -> None:
+    env = RobotArm2DEnv()
+    env.reset(seed=12)
+    _, reward, _, _, info = env.step(env.action_space.sample())
+    assert reward == pytest.approx(-info["distance"])
+    assert info["reward_terms"]["effort"] == 0.0
+    assert info["reward_terms"]["jerk"] == 0.0
+    assert info["reward_terms"]["bonus"] == 0.0
