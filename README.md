@@ -5,12 +5,19 @@
 cố định → đường tròn → hình số 8 → spline tự vẽ — bằng continuous control
 (SAC & PPO, Stable-Baselines3) trên custom Gymnasium environment.
 
-| Circle | Figure-8 | Spline |
-|:---:|:---:|:---:|
-| ![circle](assets/overlay_circle.gif) | ![figure-8](assets/overlay_fig8.gif) | ![spline](assets/overlay_spline.gif) |
+![Random policy vs SAC đã train](assets/random_vs_trained.gif)
 
-*Đường đứt đỏ: quỹ đạo target — đường cam: quỹ đạo end-effector thực tế
-(policy SAC sau 100k steps, cùng hyperparameters cho cả 3 task).*
+*Cùng episode, cùng seed: random policy (trái) đi lang thang — SAC sau 100k
+steps (phải) bám khít đường tròn target. Đường đứt đỏ: quỹ đạo target,
+đường cam: quỹ đạo end-effector thực tế.*
+
+### Demo 4 loại target (SAC, cùng hyperparameters)
+
+| Reaching điểm cố định | Circle |
+|:---:|:---:|
+| ![reaching](assets/overlay_reach.gif) | ![circle](assets/overlay_circle.gif) |
+| **Figure-8** | **Spline** |
+| ![figure-8](assets/overlay_fig8.gif) | ![spline](assets/overlay_spline.gif) |
 
 📄 **Báo cáo đầy đủ (env, setup, kết quả, ablation): [REPORT.md](REPORT.md)**
 
@@ -42,6 +49,7 @@ SAC, 100k timesteps, eval 20 episodes deterministic (chi tiết trong [REPORT.md
 
 ![SAC vs PPO](assets/learning_curves_sac_vs_ppo.png)
 ![Ba loại quỹ đạo](assets/learning_curves_trajectories.png)
+![Ablation reward terms](assets/learning_curves_ablation.png)
 
 ## Cấu trúc project
 
